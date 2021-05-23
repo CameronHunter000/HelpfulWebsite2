@@ -1,13 +1,16 @@
 ﻿using HelpfulWebsite_2.Application.Common.Interfaces;
+using HelpfulWebsite_2.Application.Common.Interfaces.Spotify;
 using HelpfulWebsite_2.Infrastructure.Files;
 using HelpfulWebsite_2.Infrastructure.Identity;
 using HelpfulWebsite_2.Infrastructure.Persistence;
 using HelpfulWebsite_2.Infrastructure.Services;
+using HelpfulWebsite_2.Infrastructure.Services.Spotify;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using System.Net.Http;
 
 namespace HelpfulWebsite_2.Infrastructure
 {
@@ -15,6 +18,7 @@ namespace HelpfulWebsite_2.Infrastructure
     {
         public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
         {
+            #region DB/Auth stuff
             if (configuration.GetValue<bool>("UseInMemoryDatabase"))
             {
                 services.AddDbContext<ApplicationDbContext>(options =>
@@ -39,11 +43,16 @@ namespace HelpfulWebsite_2.Infrastructure
 
             services.AddIdentityServer()
                 .AddApiAuthorization<ApplicationUser, ApplicationDbContext>();
+            #endregion
 
+            services.AddScoped<HttpClient>();
             services.AddTransient<IDateTime, DateTimeService>();
             services.AddTransient<IIdentityService, IdentityService>();
             services.AddTransient<ICsvFileBuilder, CsvFileBuilder>();
+            services.AddTransient<ISpotifySearchService, SpotifySearchService>();
+            services.AddTransient<ISpotifyAuthService, SpotifyAuthService>();
 
+            #region More Auth Stuff
             services.AddAuthentication()
                 .AddIdentityServerJwt();
 
@@ -51,6 +60,7 @@ namespace HelpfulWebsite_2.Infrastructure
             {
                 options.AddPolicy("CanPurge", policy => policy.RequireRole("Administrator"));
             });
+            #endregion
 
             return services;
         }
