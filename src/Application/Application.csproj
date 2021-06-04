@@ -19,7 +19,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Spotify\Commands\" />
+    <Folder Include="Music\Commands\" />
   </ItemGroup>
 
 </Project>

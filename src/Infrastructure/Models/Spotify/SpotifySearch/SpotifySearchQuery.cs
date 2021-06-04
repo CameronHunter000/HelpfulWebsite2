@@ -1,12 +1,16 @@
-﻿using MediatR;
+﻿using AutoMapper;
+using AutoMapper.Configuration.Annotations;
+using HelpfulWebsite_2.Application.Common.Mappings;
+using HelpfulWebsite_2.Application.Music.Queries.MusicSearch;
+using MediatR;
 
-namespace HelpfulWebsite_2.Application.Spotify.Queries.SpotifySearch
+namespace HelpfulWebsite_2.Infrastructure.Models.Spotify.SpotifySearch
 {
-    public class SpotifySearchQuery : IRequest<SpotifySearchResponse>
+    public class SpotifySearchQuery
     {
         public string Query { get; set; }
 
-        public string Type { get; set; } // Valid types are one or a comma delimited list of: album , artist, playlist, track, show and episode.
+        public string Type { get; set; } = "album,artist,playlist,track,show,episode"; // Valid types are one or a comma delimited list of: album , artist, playlist, track, show and episode.
 
         public EMarket Market { get; set; } = EMarket.GB;
 

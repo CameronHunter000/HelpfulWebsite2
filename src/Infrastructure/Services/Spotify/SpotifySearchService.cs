@@ -1,61 +1,68 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Configuration;
 using System.Net.Http;
 using System.Threading;
 using System.Text.Json;
-using HelpfulWebsite_2.Application.Common.Interfaces.Spotify;
-using HelpfulWebsite_2.Application.Spotify.Queries.SpotifySearch;
-using System.Collections;
-using System.IO;
-using System.Web;
+using AutoMapper;
+using HelpfulWebsite_2.Application.Common.Interfaces.Music;
+using HelpfulWebsite_2.Application.Music.Queries.MusicSearch;
+using HelpfulWebsite_2.Infrastructure.Utils;
+using HelpfulWebsite_2.Application.Common.Models;
+using HelpfulWebsite_2.Infrastructure.Mappings;
+using HelpfulWebsite_2.Infrastructure.Models.Spotify.SpotifySearch;
+using HelpfulWebsite_2.Infrastructure.Models.Spotify.SpotifySearch.ResponseModel;
 
 namespace HelpfulWebsite_2.Infrastructure.Services.Spotify
 {
-    public class SpotifySearchService : ISpotifySearchService
+    public class SpotifySearchService : IMusicSearchService
     {
         private readonly IConfiguration _configuration;
         private readonly HttpClient _httpClient;
-        private readonly ISpotifyAuthService _spotifyAuthService;
+        private readonly IMusicAuthService _spotifyAuthService;
+        private readonly IMapper _mapper;
+
 
         public SpotifySearchService(IConfiguration configuration,
             HttpClient httpClient,
-            ISpotifyAuthService spotifyAuthService)
+            IMusicAuthService spotifyAuthService,
+            IMapper mapper)
         {
             _configuration = configuration;
             _httpClient = httpClient;
             _spotifyAuthService = spotifyAuthService;
+            _mapper = mapper;
         }
 
         public class SpotifySearchServiceException : Exception
         {
-            public SpotifySearchServiceException(string message) : base(message)
-            {
-
-            }
+            public SpotifySearchServiceException(string message) 
+                : base(message) { }
         }
 
-        public async Task<SpotifySearchResponse> GetSearchResults(SpotifySearchQuery spotifySearchQuery, 
+        public async Task<TrackListDto> GetSearchResults(MusicSearchQuery musicSearchQuery, 
             CancellationToken cancellationToken) =>
-            await GetResponseFromService<SpotifySearchResponse>(spotifySearchQuery, cancellationToken);
+                await GetResponseFromService<TrackListDto>(musicSearchQuery, cancellationToken);
 
-        private async Task<T> GetResponseFromService<T>(SpotifySearchQuery spotifySearchQuery, 
+        private async Task<TrackListDto> GetResponseFromService<T>(MusicSearchQuery musicSearchQuery, 
             CancellationToken cancellationToken)
         {
+            var queryObject = MusicMapper.GetSpotifySearchQuery(musicSearchQuery);
+
             await _spotifyAuthService.SetAuthHeader(cancellationToken);
+
             var url = _configuration["Spotify:Url"];
             var path = "search";
-            var query = GetQueryString<SpotifySearchQuery>(spotifySearchQuery);
+            var queryString = HelperMethods.GetQueryString(queryObject);
 
             var response =
                 await _httpClient.GetAsync(
-                    $"{url}{path}?{query}",
+                    $"{url}{path}?{queryString}",
                     cancellationToken);
 
-            return await Deserialize<T>(response, cancellationToken);
+            var searchResponse = await Deserialize<SpotifySearchResponse>(response, cancellationToken);
+
+            return MusicMapper.GetTrackList(searchResponse);
         }   
 
         private static async Task<T> Deserialize<T>(HttpResponseMessage response,
@@ -64,22 +71,14 @@ namespace HelpfulWebsite_2.Infrastructure.Services.Spotify
             await using var contentStream =
                 await response.Content.ReadAsStreamAsync(cancellationToken);
 
-            var jsonSerializerOptions = new JsonSerializerOptions(JsonSerializerDefaults.Web);
+            var jsonSerializerOptions = new JsonSerializerOptions(JsonSerializerDefaults.Web)
+            {
+                PropertyNameCaseInsensitive = true
+            };
 
             return await JsonSerializer.DeserializeAsync<T>(contentStream,
                 jsonSerializerOptions,
                 cancellationToken);
-        }
-
-        public static string GetQueryString<T>(SpotifySearchQuery query)
-        {
-            var properties = 
-                from p in typeof(T).GetProperties()
-                where p.GetValue(query) != null
-                // ReSharper disable twice PossibleNullReferenceException - it's handled by the line above
-                select p.Name.ToLower() + "=" + HttpUtility.UrlEncode(p.GetValue(query).ToString().ToLower());
-
-            return string.Join("&", properties.ToArray());
         }
     }
 }

@@ -8,11 +8,12 @@ using System.Net.Http;
 using System.Text.Json;
 using System.Text;
 using System.Net.Http.Headers;
-using HelpfulWebsite_2.Application.Common.Interfaces.Spotify;
+using HelpfulWebsite_2.Application.Common.Interfaces.Music;
+using System.Text.Json.Serialization;
 
 namespace HelpfulWebsite_2.Infrastructure.Services.Spotify
 {
-    public class SpotifyAuthService : ISpotifyAuthService
+    public class SpotifyAuthService : IMusicAuthService
     {
         private readonly IConfiguration _configuration;
         private readonly HttpClient _httpClient;
@@ -26,10 +27,8 @@ namespace HelpfulWebsite_2.Infrastructure.Services.Spotify
 
         public class SpotifyAuthServiceException : Exception
         {
-            public SpotifyAuthServiceException(string message) : base(message)
-            {
-
-            }
+            public SpotifyAuthServiceException(string message) 
+                : base(message) { }
         }
 
         public async Task SetAuthHeader(CancellationToken cancellationToken) =>
@@ -39,20 +38,18 @@ namespace HelpfulWebsite_2.Infrastructure.Services.Spotify
         {
             var clientId = _configuration["Spotify:clientId"];
             var clientSecret = _configuration["Spotify:clientSecret"];
-            var encodedAuthHeaderParameter = Convert.ToBase64String(
-                    Encoding.UTF8.GetBytes($"{clientId}:{clientSecret}"));
+            var url = _configuration["Spotify:TokenUrl"];
+
+            var content = new Dictionary<string, string> {
+                {"grant_type", "client_credentials"}
+            };
+            var urlEncodedContent = new FormUrlEncodedContent(content);
 
             _httpClient.DefaultRequestHeaders.Authorization = 
-                new AuthenticationHeaderValue("Basic", encodedAuthHeaderParameter);
+                GetHeaderForAuthTokenRequest(clientId, clientSecret);
 
-            var url = _configuration["Spotify:TokenUrl"];
-            var content = 
-                new FormUrlEncodedContent(new Dictionary<string, string>{
-                    {"grant_type", "client_credentials"}
-                });
-
-            var response = await _httpClient.PostAsync(url, 
-                content, cancellationToken);
+            var response = await _httpClient.PostAsync(url,
+                urlEncodedContent, cancellationToken);
 
             if (!response.IsSuccessStatusCode)
             {
@@ -63,7 +60,15 @@ namespace HelpfulWebsite_2.Infrastructure.Services.Spotify
             var authToken = await Deserialize<SpotifyAuthToken>(response, cancellationToken);
 
             _httpClient.DefaultRequestHeaders.Authorization = 
-                new AuthenticationHeaderValue(authToken.token_type, authToken.access_token);
+                new AuthenticationHeaderValue(authToken.TokenType, authToken.AccessToken);
+        }
+
+        private static AuthenticationHeaderValue GetHeaderForAuthTokenRequest(string clientId, string clientSecret)
+        {
+            var encodedParameter = Encoding.UTF8.GetBytes($"{clientId}:{clientSecret}");
+            var base64EncodedParameter = Convert.ToBase64String(encodedParameter);
+
+            return new AuthenticationHeaderValue("Basic", base64EncodedParameter);
         }
 
         private static async Task<T> Deserialize<T>(HttpResponseMessage response,
@@ -75,12 +80,17 @@ namespace HelpfulWebsite_2.Infrastructure.Services.Spotify
             return await JsonSerializer.DeserializeAsync<T>(contentStream,
                 cancellationToken: cancellationToken);
         }
-        
+
         public class SpotifyAuthToken
         {
-            public string access_token { get; set; }
-            public string token_type { get; set; }
-            public int expires_in { get; set; }
+            [JsonPropertyName("access_token")]
+            public string AccessToken { get; set; }
+
+            [JsonPropertyName("token_type")]
+            public string TokenType { get; set; }
+
+            [JsonPropertyName("expires_in")]
+            public int ExpiresIn { get; set; }
         }
     }
 }

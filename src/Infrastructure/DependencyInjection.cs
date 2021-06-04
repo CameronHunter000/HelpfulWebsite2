@@ -1,5 +1,4 @@
 ﻿using HelpfulWebsite_2.Application.Common.Interfaces;
-using HelpfulWebsite_2.Application.Common.Interfaces.Spotify;
 using HelpfulWebsite_2.Infrastructure.Files;
 using HelpfulWebsite_2.Infrastructure.Identity;
 using HelpfulWebsite_2.Infrastructure.Persistence;
@@ -11,6 +10,9 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using System.Net.Http;
+using System.Reflection;
+using AutoMapper;
+using HelpfulWebsite_2.Application.Common.Interfaces.Music;
 
 namespace HelpfulWebsite_2.Infrastructure
 {
@@ -49,8 +51,9 @@ namespace HelpfulWebsite_2.Infrastructure
             services.AddTransient<IDateTime, DateTimeService>();
             services.AddTransient<IIdentityService, IdentityService>();
             services.AddTransient<ICsvFileBuilder, CsvFileBuilder>();
-            services.AddTransient<ISpotifySearchService, SpotifySearchService>();
-            services.AddTransient<ISpotifyAuthService, SpotifyAuthService>();
+            services.AddTransient<IMusicSearchService, SpotifySearchService>();
+            services.AddTransient<IMusicAuthService, SpotifyAuthService>();
+            services.AddAutoMapper(Assembly.GetExecutingAssembly());
 
             #region More Auth Stuff
             services.AddAuthentication()
