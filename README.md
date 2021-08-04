@@ -1,9 +1,17 @@
  [comment]: <> (<img align="left" width="116" height="116" src="https://raw.githubusercontent.com/jasontaylordev/CleanArchitecture/main/.github/icon.png" />)
  
  # Cameron's Helpful Website
+ 
+<br/>
+<br/>
+<br/>
+<br/>
 
-NOTE this is a work in progress. See branch HW-9 for the latest code as an example of what I have been working on.
+# ⚠️ **This is a work in progress. See branch HW-9 for the latest code as an example of what I have been working on.** ⚠️
 
+<br/>
+<br/>
+<br/>
 <br/>
 
 This is a Single Page App (SPA) with Angular and ASP.NET Core following the principles of Clean Architecture.
