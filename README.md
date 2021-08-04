@@ -2,6 +2,8 @@
  
  # Cameron's Helpful Website
 
+NOTE this is a work in progress. See branch HW-9 for the latest code as an example of what I have been working on.
+
 <br/>
 
 This is a Single Page App (SPA) with Angular and ASP.NET Core following the principles of Clean Architecture.
