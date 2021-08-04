@@ -157,5 +157,8 @@
       }
     }
   },
-  "defaultProject": "HelpfulWebsite_2.WebUI"
+  "defaultProject": "HelpfulWebsite_2.WebUI",
+  "cli": {
+    "analytics": false
+  }
 }
