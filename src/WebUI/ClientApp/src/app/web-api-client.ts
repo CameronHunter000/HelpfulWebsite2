@@ -14,6 +14,76 @@ import { HttpClient, HttpHeaders, HttpResponse, HttpResponseBase } from '@angula
 
 export const API_BASE_URL = new InjectionToken<string>('API_BASE_URL');
 
+export interface IMusicClient {
+    getMusicSearchResponse(searchText: string | null | undefined, resultType: string | null | undefined): Observable<TrackListDto>;
+}
+
+@Injectable({
+    providedIn: 'root'
+})
+export class MusicClient implements IMusicClient {
+    private http: HttpClient;
+    private baseUrl: string;
+    protected jsonParseReviver: ((key: string, value: any) => any) | undefined = undefined;
+
+    constructor(@Inject(HttpClient) http: HttpClient, @Optional() @Inject(API_BASE_URL) baseUrl?: string) {
+        this.http = http;
+        this.baseUrl = baseUrl !== undefined && baseUrl !== null ? baseUrl : "";
+    }
+
+    getMusicSearchResponse(searchText: string | null | undefined, resultType: string | null | undefined): Observable<TrackListDto> {
+        let url_ = this.baseUrl + "/api/Music?";
+        if (searchText !== undefined && searchText !== null)
+            url_ += "SearchText=" + encodeURIComponent("" + searchText) + "&";
+        if (resultType !== undefined && resultType !== null)
+            url_ += "ResultType=" + encodeURIComponent("" + resultType) + "&";
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_ : any = {
+            observe: "response",
+            responseType: "blob",
+            headers: new HttpHeaders({
+                "Accept": "application/json"
+            })
+        };
+
+        return this.http.request("get", url_, options_).pipe(_observableMergeMap((response_ : any) => {
+            return this.processGetMusicSearchResponse(response_);
+        })).pipe(_observableCatch((response_: any) => {
+            if (response_ instanceof HttpResponseBase) {
+                try {
+                    return this.processGetMusicSearchResponse(<any>response_);
+                } catch (e) {
+                    return <Observable<TrackListDto>><any>_observableThrow(e);
+                }
+            } else
+                return <Observable<TrackListDto>><any>_observableThrow(response_);
+        }));
+    }
+
+    protected processGetMusicSearchResponse(response: HttpResponseBase): Observable<TrackListDto> {
+        const status = response.status;
+        const responseBlob =
+            response instanceof HttpResponse ? response.body :
+            (<any>response).error instanceof Blob ? (<any>response).error : undefined;
+
+        let _headers: any = {}; if (response.headers) { for (let key of response.headers.keys()) { _headers[key] = response.headers.get(key); }}
+        if (status === 200) {
+            return blobToText(responseBlob).pipe(_observableMergeMap(_responseText => {
+            let result200: any = null;
+            let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result200 = TrackListDto.fromJS(resultData200);
+            return _observableOf(result200);
+            }));
+        } else if (status !== 200 && status !== 204) {
+            return blobToText(responseBlob).pipe(_observableMergeMap(_responseText => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            }));
+        }
+        return _observableOf<TrackListDto>(<any>null);
+    }
+}
+
 export interface ITodoItemsClient {
     getTodoItemsWithPagination(listId: number | undefined, pageNumber: number | undefined, pageSize: number | undefined): Observable<PaginatedListOfTodoItemDto>;
     create(command: CreateTodoItemCommand): Observable<number>;
@@ -645,6 +715,138 @@ export class WeatherForecastClient implements IWeatherForecastClient {
         }
         return _observableOf<WeatherForecast[]>(<any>null);
     }
+}
+
+export class TrackListDto implements ITrackListDto {
+    track?: TrackVm[] | undefined;
+
+    constructor(data?: ITrackListDto) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (<any>this)[property] = (<any>data)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            if (Array.isArray(_data["track"])) {
+                this.track = [] as any;
+                for (let item of _data["track"])
+                    this.track!.push(TrackVm.fromJS(item));
+            }
+        }
+    }
+
+    static fromJS(data: any): TrackListDto {
+        data = typeof data === 'object' ? data : {};
+        let result = new TrackListDto();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        if (Array.isArray(this.track)) {
+            data["track"] = [];
+            for (let item of this.track)
+                data["track"].push(item.toJSON());
+        }
+        return data; 
+    }
+}
+
+export interface ITrackListDto {
+    track?: TrackVm[] | undefined;
+}
+
+export class TrackVm implements ITrackVm {
+    id?: string;
+    trackName?: string | undefined;
+    album?: string | undefined;
+    artists?: string[] | undefined;
+    popularity?: number | undefined;
+    releaseDate?: string | undefined;
+    language?: string | undefined;
+    genres?: string[] | undefined;
+    duration?: number | undefined;
+    playUri?: string | undefined;
+
+    constructor(data?: ITrackVm) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (<any>this)[property] = (<any>data)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.id = _data["id"];
+            this.trackName = _data["trackName"];
+            this.album = _data["album"];
+            if (Array.isArray(_data["artists"])) {
+                this.artists = [] as any;
+                for (let item of _data["artists"])
+                    this.artists!.push(item);
+            }
+            this.popularity = _data["popularity"];
+            this.releaseDate = _data["releaseDate"];
+            this.language = _data["language"];
+            if (Array.isArray(_data["genres"])) {
+                this.genres = [] as any;
+                for (let item of _data["genres"])
+                    this.genres!.push(item);
+            }
+            this.duration = _data["duration"];
+            this.playUri = _data["playUri"];
+        }
+    }
+
+    static fromJS(data: any): TrackVm {
+        data = typeof data === 'object' ? data : {};
+        let result = new TrackVm();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["id"] = this.id;
+        data["trackName"] = this.trackName;
+        data["album"] = this.album;
+        if (Array.isArray(this.artists)) {
+            data["artists"] = [];
+            for (let item of this.artists)
+                data["artists"].push(item);
+        }
+        data["popularity"] = this.popularity;
+        data["releaseDate"] = this.releaseDate;
+        data["language"] = this.language;
+        if (Array.isArray(this.genres)) {
+            data["genres"] = [];
+            for (let item of this.genres)
+                data["genres"].push(item);
+        }
+        data["duration"] = this.duration;
+        data["playUri"] = this.playUri;
+        return data; 
+    }
+}
+
+export interface ITrackVm {
+    id?: string;
+    trackName?: string | undefined;
+    album?: string | undefined;
+    artists?: string[] | undefined;
+    popularity?: number | undefined;
+    releaseDate?: string | undefined;
+    language?: string | undefined;
+    genres?: string[] | undefined;
+    duration?: number | undefined;
+    playUri?: string | undefined;
 }
 
 export class PaginatedListOfTodoItemDto implements IPaginatedListOfTodoItemDto {

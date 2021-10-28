@@ -1,0 +1,32 @@
+<h1 id="tableLabel">Spotify Search</h1>
+
+<p>This component allows you to search for tracks on Spotify.</p>
+
+<p *ngIf="!track"><em>Loading...</em></p>
+
+<table class='table table-striped' aria-labelledby="tableLabel" *ngIf="track">
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Album</th>
+      <th>Artists</th>
+      <th>Listens</th>
+      <th>Duration</th>
+      <th>Release Date</th>
+      <th>Genres</th>
+      <th>Play Link</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr *ngFor="let track of tracks">
+      <td>{{ track.TrackName }}</td>
+      <td>{{ track.Album }}</td>
+      <td>{{ string("'", track.Artists)}}</td>
+      <td>{{ track.Popularity }}</td>
+      <td>{{ track.Duration }}</td>
+      <td>{{ track.ReleaseDate }}</td>
+      <td>{{ string("'", track.Genres)}}</td>
+      <td>{{ track.PlayUri }}</td>
+    </tr>
+  </tbody>
+</table>
